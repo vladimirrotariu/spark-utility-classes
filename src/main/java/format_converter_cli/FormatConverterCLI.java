@@ -1,6 +1,7 @@
 package format_converter_cli;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -124,11 +125,31 @@ public class FormatConverterCLI {
         }
     }
 
-    private static void validateSourcePath(String pathFile) throws FileNotFoundException {
-        Path path = Paths.get(pathFile);
+    private static void validateSourcePath(String pathSourceFile) throws FileNotFoundException {
+        Path path = Paths.get(pathSourceFile);
+        if (Files.notExists(path)) {
+            throw new FileNotFoundException("The source file could not be found at " + pathSourceFile);
+        }
+    }
 
-        if (!(Files.exists(path))) {
-            throw new FileNotFoundException("The source file at "+ path + " was not found!");
+    private static void validateSinkPath(String pathSinkFile) throws IOException {
+        Path path = Paths.get(pathSinkFile);
+        Path parentDirectories = path.getParent();
+
+        try {
+            Files.createDirectories(parentDirectories);
+        } catch (IOException e) {
+            logger.severe("Directory tree creation failed for " + path);
+            throw e;
+        }
+
+        try {
+            if (Files.notExists(path)) {
+                Files.createFile(path);
+            }
+        } catch (IOException e) {
+            logger.severe("File creation failed for " + path);
+            throw e;
         }
     }
 }

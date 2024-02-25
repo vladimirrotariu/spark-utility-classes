@@ -132,6 +132,19 @@ public class FormatConverterCLI {
             }
         } while (isValid != true);
 
+
+        int numberCoresLocal;
+
+        System.out.print("The number of CPU cores you want to use for the conversion: ");
+        numberCoresLocal = scanner.nextInt();
+        try {
+            FormatConverterCLI.validateCores(numberCoresLocal);
+            isValid = true;
+        } catch (ExcessiveCoresException e) {
+            FormatConverterCLI.logger.warning("CPU Available Resources: " +
+                 "\n" + e.getMessage() + "\n");
+        }
+
         scanner.close();
 
         String[] validatedInput =  {formatSource, isFirstRowHeader, formatSink, pathSource, pathSink};
@@ -178,6 +191,22 @@ public class FormatConverterCLI {
         } catch (IOException e) {
             logger.severe("File creation failed for " + path);
             throw e;
+        }
+    }
+
+    final static class ExcessiveCoresException extends Exception {
+            public ExcessiveCoresException(String message) {
+                super(message);
+            }
+        }
+
+    private static void validateCores(int numberCores) throws ExcessiveCoresException {
+        int numberAvailableCores = Runtime.getRuntime().availableProcessors();
+        
+        if (numberCores > numberAvailableCores) {
+            logger.warning("Number of available cores is " + numberAvailableCores + ", using them all..");
+            throw new FormatConverterCLI.ExcessiveCoresException("The number of cores " + numberCores + 
+            " exceeds the available resources, setting to maximum...");
         }
     }
 }

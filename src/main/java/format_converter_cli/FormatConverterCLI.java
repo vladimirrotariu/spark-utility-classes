@@ -42,16 +42,21 @@ public class FormatConverterCLI {
         if (formatSource == "csv") {
             isValid = false;
             do {
-                System.out.println("WARNING: a false positive to the following question will result in data loss!");
-                System.out.print("Is the first row a header? (Y/N) ");
-                String isFirstRowHeader = scanner.nextLine();
-                    if (isFirstRowHeader == "Y") {
+                logger.warning("A false positive to the following question will result in data loss!");
+                System.out.print("\n" + "Is the first row a header? (Y/N) ");
+                String isFirstRowHeader = scanner.nextLine().toLowerCase();
+
+                switch(isFirstRowHeader) {
+                    case "y":
                         hasHeader = true;
-                    } else if (isFirstRowHeader == "N") {
+                        break;
+                    case "n":
                         hasHeader = false;
-                    } else {
+                        break;
+                    default:
                         FormatConverterCLI.logger.warning("Choose between Y/N!" + "\n");
-                    }
+                        break;
+                }
             } while (isValid != true);
         }
 

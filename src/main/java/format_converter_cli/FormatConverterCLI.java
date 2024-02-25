@@ -22,6 +22,38 @@ public class FormatConverterCLI {
     public static Set<String> supportedFormats = new HashSet<>(Arrays.asList("csv", "json", "parquet", "orc", "avro"));
 
     public static void main(String[] args) {   
+        
+        String[] validatedInput = FormatConverterCLI.readAndValidateInput();
+        String formatSource = validatedInput[0];
+        String isFirstRowHeader = validatedInput[1];
+        String formatSink = validatedInput[2];
+        String pathSource = validatedInput[3];
+        String pathSink = validatedInput[4];
+
+        FormatConverterCLI formatConverter = new FormatConverterCLI();
+        formatConverter.start(formatSource, isFirstRowHeader, formatSink, pathSource, pathSink);
+    }
+
+    private void start(String formatSource,  String isFirstRowHeader, String formatSink, String pathSource, String pathSink) {
+        LocalDateTime instantDateTime = LocalDateTime.now();
+        String formattedDateTime = formatDateTime(instantDateTime);
+        String infoMessage = String.format("Spark parallel format converter initialized at %s", formattedDateTime);
+        FormatConverterCLI.logger.info(infoMessage);
+
+        SparkSession spark = SparkSession.builder()
+            .appName("Demo app loading csv data to dataframe")
+            .master("local[*]")
+            .getOrCreate();
+
+        Dataset<Row> df = spark.read()
+                               .format("csv")
+                               .option("header", "false") //may be omitted if no header
+                               .load("src/main/data/coin_sequences.txt");
+        
+        df.show();
+    }
+
+    private static String[] readAndValidateInput() {
         Scanner scanner = new Scanner(System.in);
 
         boolean isValid = false;
@@ -38,25 +70,20 @@ public class FormatConverterCLI {
             }
         } while (isValid != true);
 
-        boolean hasHeader = false;
+        String isFirstRowHeader = "n";
         if (formatSource == "csv") {
-            isValid = false;
+            isValid = true;
             do {
                 logger.warning("A false positive to the following question will result in data loss!");
                 System.out.print("\n" + "Is the first row a header? (Y/N) ");
-                String isFirstRowHeader = scanner.nextLine().toLowerCase();
+                isFirstRowHeader = scanner.nextLine().toLowerCase();
 
-                switch(isFirstRowHeader) {
-                    case "y":
-                        hasHeader = true;
-                        break;
-                    case "n":
-                        hasHeader = false;
-                        break;
-                    default:
-                        FormatConverterCLI.logger.warning("Choose between Y/N!" + "\n");
-                        break;
+                if (!(isFirstRowHeader == "y" || isFirstRowHeader == "n")) {
+                    FormatConverterCLI.logger.warning("Choose between Y/N!" + "\n");
+                    isValid = false;
                 }
+
+                
             } while (isValid != true);
         }
 
@@ -107,27 +134,9 @@ public class FormatConverterCLI {
 
         scanner.close();
 
-        FormatConverterCLI formatConverter = new FormatConverterCLI();
-        formatConverter.start(formatSource, formatSink, hasHeader);
-    }
+        String[] validatedInput =  {formatSource, isFirstRowHeader, formatSink, pathSource, pathSink};
 
-    private void start(String formatSource, String formatSink, boolean hasHeader) {
-        LocalDateTime instantDateTime = LocalDateTime.now();
-        String formattedDateTime = formatDateTime(instantDateTime);
-        String infoMessage = String.format("Spark parallel format converter initialized at %s", formattedDateTime);
-        FormatConverterCLI.logger.info(infoMessage);
-
-        SparkSession spark = SparkSession.builder()
-            .appName("Demo app loading csv data to dataframe")
-            .master("local[*]")
-            .getOrCreate();
-
-        Dataset<Row> df = spark.read()
-                               .format("csv")
-                               .option("header", "false") //may be omitted if no header
-                               .load("src/main/data/coin_sequences.txt");
-        
-        df.show();
+        return validatedInput;
     }
 
     private static String formatDateTime(LocalDateTime instantDateTime) {

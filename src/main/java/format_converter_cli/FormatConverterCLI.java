@@ -27,7 +27,7 @@ public class FormatConverterCLI {
         boolean isValid = false;
         String formatSource;
         do {
-            System.out.print("The source format (as supported by the DataFrame API): ");
+            System.out.print("The source format (as supported by Apache Spark's DataFrame API): ");
             formatSource = scanner.nextLine();
             try {
                 validateFormat(formatSource);
@@ -84,7 +84,21 @@ public class FormatConverterCLI {
                 isValid = false;
             }
         } while (isValid != true);
-            
+        
+        isValid = false;
+        String pathSink;
+        do {
+            System.out.print("The relative/absolute path to the sink file: ");
+            pathSink = scanner.nextLine();
+            try {
+                validateSinkPath(pathSink);
+                isValid = true;
+            } catch (IOException e) {
+                FormatConverterCLI.logger.warning("Sink file and/or directory tree failed the validation"
+                + "\n" + e.getMessage() + "\n");
+                isValid = false;
+            }
+        } while (isValid != true);
 
         scanner.close();
 

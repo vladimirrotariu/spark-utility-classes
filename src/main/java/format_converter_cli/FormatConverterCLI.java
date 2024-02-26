@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 
 public class FormatConverterCLI {
@@ -29,28 +30,35 @@ public class FormatConverterCLI {
         String formatSink = validatedInput[2];
         String pathSource = validatedInput[3];
         String pathSink = validatedInput[4];
+        String numberCores = validatedInput[5];
+
+        boolean hasHeaher = isFirstRowHeader == "y"? true : false;
 
         FormatConverterCLI formatConverter = new FormatConverterCLI();
-        formatConverter.start(formatSource, isFirstRowHeader, formatSink, pathSource, pathSink);
+        formatConverter.convert(formatSource, hasHeaher, formatSink, pathSource, pathSink, numberCores);
     }
 
-    private void start(String formatSource,  String isFirstRowHeader, String formatSink, String pathSource, String pathSink) {
+    private void convert(String formatSource,  boolean hasHeaher,
+     String formatSink, String pathSource, String pathSink, String numberCores) {
         LocalDateTime instantDateTime = LocalDateTime.now();
         String formattedDateTime = formatDateTime(instantDateTime);
         String infoMessage = String.format("Spark parallel format converter initialized at %s", formattedDateTime);
         FormatConverterCLI.logger.info(infoMessage);
 
         SparkSession spark = SparkSession.builder()
-            .appName("Demo app loading csv data to dataframe")
-            .master("local[*]")
+            .appName("Format converter")
+            .master("local[" + numberCores + "]")
             .getOrCreate();
 
         Dataset<Row> df = spark.read()
-                               .format("csv")
-                               .option("header", "false") //may be omitted if no header
-                               .load("src/main/data/coin_sequences.txt");
+                               .format(formatSource)
+                               .option("header", hasHeaher) 
+                               .load(pathSource);
         
-        df.show();
+        df.coalesce(1).write()
+          .format(formatSink)
+          .mode(SaveMode.Overwrite)
+          .save(pathSink);
     }
 
     private static String[] readAndValidateInput() {
@@ -60,7 +68,7 @@ public class FormatConverterCLI {
         String formatSource;
         do {
             System.out.print("The source format (as supported by Apache Spark's DataFrame API): ");
-            formatSource = scanner.nextLine();
+            formatSource = scanner.nextLine().trim();
             try {
                 validateFormat(formatSource);
                 isValid = true;
@@ -76,7 +84,7 @@ public class FormatConverterCLI {
             do {
                 logger.warning("A false positive to the following question will result in data loss!");
                 System.out.print("\n" + "Is the first row a header? (Y/N) ");
-                isFirstRowHeader = scanner.nextLine().toLowerCase();
+                isFirstRowHeader = scanner.nextLine().trim().toLowerCase();
 
                 if (!(isFirstRowHeader == "y" || isFirstRowHeader == "n")) {
                     FormatConverterCLI.logger.warning("Choose between Y/N!" + "\n");
@@ -91,7 +99,7 @@ public class FormatConverterCLI {
         String formatSink;
         do {
             System.out.print("The sink format (as supported by the DataFrame API): ");
-            formatSink = scanner.nextLine();
+            formatSink = scanner.nextLine().trim();
             try {
                 validateFormat(formatSink);
                 isValid = true;
@@ -106,7 +114,7 @@ public class FormatConverterCLI {
         String pathSource;
         do {
             System.out.print("The relative/absolute path to the source file: ");
-            pathSource = scanner.nextLine();
+            pathSource = scanner.nextLine().trim();
             try {
                 validateSourcePath(pathSource);
                 isValid = true;
@@ -121,7 +129,7 @@ public class FormatConverterCLI {
         String pathSink;
         do {
             System.out.print("The relative/absolute path to the sink file: ");
-            pathSink = scanner.nextLine();
+            pathSink = scanner.nextLine().trim();
             try {
                 validateSinkPath(pathSink);
                 isValid = true;
@@ -134,7 +142,6 @@ public class FormatConverterCLI {
 
 
         int numberCoresLocal;
-
         System.out.print("The number of CPU cores you want to use for the conversion: ");
         numberCoresLocal = scanner.nextInt();
         try {
@@ -147,7 +154,7 @@ public class FormatConverterCLI {
 
         scanner.close();
 
-        String[] validatedInput =  {formatSource, isFirstRowHeader, formatSink, pathSource, pathSink};
+        String[] validatedInput =  {formatSource, isFirstRowHeader, formatSink, pathSource, pathSink, String.valueOf(numberCoresLocal)};
 
         return validatedInput;
     }
@@ -178,18 +185,11 @@ public class FormatConverterCLI {
         Path parentDirectories = path.getParent();
 
         try {
-            Files.createDirectories(parentDirectories);
-        } catch (IOException e) {
-            logger.severe("Directory tree creation failed for " + path);
-            throw e;
-        }
-
-        try {
-            if (Files.notExists(path)) {
-                Files.createFile(path);
+            if (parentDirectories != null) {
+                Files.createDirectories(parentDirectories);
             }
         } catch (IOException e) {
-            logger.severe("File creation failed for " + path);
+            logger.severe("Directory tree creation failed for " + path);
             throw e;
         }
     }

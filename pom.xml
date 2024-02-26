@@ -5,7 +5,7 @@
   <artifactId>utils.spark</artifactId>
   <packaging>jar</packaging>
   <version>1.0-SNAPSHOT</version>
-  <name>format_converter</name>
+  <name>Format Converter CLI</name>
   <url>http://maven.apache.org</url>
   <dependencies>
     <dependency>
@@ -19,9 +19,14 @@
       <artifactId>spark-sql_2.12</artifactId>
       <version>3.5.0</version> 
     </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-avro_2.12</artifactId>
+      <version>3.5.1</version> 
+    </dependency>
   </dependencies>
   <properties>
-    <maven.compiler.release>9</maven.compiler.release> 
+    <maven.compiler.release>11</maven.compiler.release> 
 </properties>
 <build>
   <plugins>
@@ -39,7 +44,7 @@
       <configuration>
           <executable>java</executable>
           <commandlineArgs>
-            --add-opens java.base/sun.nio.ch=ALL-UNNAMED -classpath %classpath format_converter.FormatConverter
+            --add-opens java.base/sun.nio.ch=ALL-UNNAMED -classpath %classpath format_converter_cli.FormatConverterCLI
           </commandlineArgs>
       </configuration>
     </plugin>
